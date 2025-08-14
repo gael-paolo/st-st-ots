@@ -118,7 +118,7 @@ if uploaded_file:
 
 # Botones de acción solo si hay DataFrame cargado
 if st.session_state.df is not None:
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
 
     with col1:
         if st.button("📤 Subir archivo"):
@@ -139,10 +139,6 @@ if st.session_state.df is not None:
                 send_email(df_selected, timestamp)
 
     with col2:
-        if st.button("🧹 Limpiar vista"):
-            st.session_state.df = None
-
-    with col3:
         fecha_inicio = st.date_input("Fecha inicio")
         fecha_fin = st.date_input("Fecha fin")
         if st.button("📥 Descargar por fechas"):
