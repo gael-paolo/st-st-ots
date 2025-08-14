@@ -6,7 +6,6 @@ from email.mime.multipart import MIMEMultipart
 from google.cloud import storage
 import tempfile
 from datetime import datetime
-import json
 
 # ======================
 # Leer variables desde st.secrets
@@ -18,12 +17,21 @@ GCS_BUCKET = st.secrets["gcp_config"]["GCS_BUCKET"]
 GCP_SERVICE_ACCOUNT = st.secrets["GCP_SERVICE_ACCOUNT"]
 
 # ======================
-# Configurar cliente GCP con credenciales temporales
+# Crear archivo temporal de credenciales GCP
 # ======================
-with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as temp_file:
-    json.dump(GCP_SERVICE_ACCOUNT, temp_file)
+with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as temp_file:
+    temp_file.write("{\n")
+    for i, (k, v) in enumerate(GCP_SERVICE_ACCOUNT.items()):
+        # Escapar saltos de línea en private_key
+        if k == "private_key":
+            v = v.replace("\n", "\\n")
+        # Agregar coma excepto en la última línea
+        comma = "," if i < len(GCP_SERVICE_ACCOUNT) - 1 else ""
+        temp_file.write(f'  "{k}": "{v}"{comma}\n')
+    temp_file.write("}")
     temp_file_path = temp_file.name
 
+# Inicializar cliente GCP
 storage_client = storage.Client.from_service_account_json(temp_file_path)
 bucket = storage_client.bucket(GCS_BUCKET)
 
