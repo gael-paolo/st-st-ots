@@ -6,6 +6,7 @@ from email.mime.multipart import MIMEMultipart
 from google.cloud import storage
 import tempfile
 from datetime import datetime
+import io
 
 # ======================
 # Leer variables desde st.secrets
@@ -75,6 +76,28 @@ def send_email(df, timestamp):
         st.error(f"❌ Error al enviar el correo: {e}")
 
 # ======================
+# Función descargar por rango de fechas desde GCP
+# ======================
+def download_blobs_as_df(start_date, end_date):
+    blobs = list(bucket.list_blobs())
+    dfs = []
+    for blob in blobs:
+        if blob.name.endswith(".csv"):
+            try:
+                # Extraer solo la fecha YYYY_MM_DD del nombre del archivo
+                fecha_str = blob.name.replace("SurTrading_", "").replace(".csv", "")[:10]
+                fecha_blob = datetime.strptime(fecha_str, "%Y_%m_%d").date()
+                if start_date <= fecha_blob <= end_date:
+                    csv_data = blob.download_as_text()
+                    df_blob = pd.read_csv(io.StringIO(csv_data))
+                    dfs.append(df_blob)
+            except:
+                continue
+    if dfs:
+        return pd.concat(dfs, ignore_index=True)
+    return pd.DataFrame()
+
+# ======================
 # Interfaz Streamlit
 # ======================
 st.title("📤 Carga y Envío de Archivo Excel a GCP + Email")
@@ -124,12 +147,9 @@ if st.session_state.df is not None:
         fecha_inicio = st.date_input("Fecha inicio")
         fecha_fin = st.date_input("Fecha fin")
         if st.button("📥 Descargar por fechas"):
-            df_filtrado = st.session_state.df[
-                (pd.to_datetime(st.session_state.df['Invoice_DATE']) >= pd.to_datetime(fecha_inicio)) &
-                (pd.to_datetime(st.session_state.df['Invoice_DATE']) <= pd.to_datetime(fecha_fin))
-            ]
-            if not df_filtrado.empty:
-                csv = df_filtrado.to_csv(index=False)
-                st.download_button("Descargar CSV", csv, file_name="filtrado.csv", mime="text/csv")
+            df_consolidado = download_blobs_as_df(fecha_inicio, fecha_fin)
+            if not df_consolidado.empty:
+                csv = df_consolidado.to_csv(index=False)
+                st.download_button("Descargar CSV", csv, file_name="consolidado.csv", mime="text/csv")
             else:
                 st.warning("⚠ No se encontraron registros en el rango seleccionado.")
