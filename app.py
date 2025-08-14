@@ -99,7 +99,7 @@ if st.session_state.df is not None:
 
     with col1:
         if st.button("📤 Subir a GCP y Enviar Correo"):
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now().strftime("%Y_%m_%d")
             blob_name = f"SurTrading_{timestamp}.csv"
 
             # Seleccionar columnas a enviar
