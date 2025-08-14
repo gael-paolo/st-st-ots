@@ -55,7 +55,7 @@ def send_email(df, timestamp):
     try:
         mensaje_html = f"""
         <p>Hola,</p>
-        <p>Adjunto encontrarás el detalle de nuevas OTs Facturadas:</p>
+        <p>Adjunto encontrarás el detalle de nuevas OTs Facturadas por Sur Trading:</p>
         {df.to_html(index=False)}
         <p>Saludos,<br>Bot Retención</p>
         """
@@ -100,7 +100,7 @@ def download_blobs_as_df(start_date, end_date):
 # ======================
 # Interfaz Streamlit
 # ======================
-st.title("📤 Carga y Envío de Archivo Excel a GCP + Email")
+st.title("📤 Reporting Retención Sur Trading")
 
 uploaded_file = st.file_uploader(
     "📂 Subir archivo Excel",
@@ -121,7 +121,7 @@ if st.session_state.df is not None:
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("📤 Subir a GCP y Enviar Correo"):
+        if st.button("📤 Subir archivo"):
             timestamp = datetime.now().strftime("%Y_%m_%d")
             blob_name = f"SurTrading_{timestamp}.csv"
 
