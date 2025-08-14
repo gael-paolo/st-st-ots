@@ -22,10 +22,8 @@ GCP_SERVICE_ACCOUNT = st.secrets["GCP_SERVICE_ACCOUNT"]
 with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as temp_file:
     temp_file.write("{\n")
     for i, (k, v) in enumerate(GCP_SERVICE_ACCOUNT.items()):
-        # Escapar saltos de línea en private_key
         if k == "private_key":
             v = v.replace("\n", "\\n")
-        # Agregar coma excepto en la última línea
         comma = "," if i < len(GCP_SERVICE_ACCOUNT) - 1 else ""
         temp_file.write(f'  "{k}": "{v}"{comma}\n')
     temp_file.write("}")
@@ -79,16 +77,19 @@ def send_email(df, timestamp):
 # ======================
 # Interfaz Streamlit
 # ======================
-st.title("📤 Carga y Envío de Archivo a GCP + Email")
+st.title("📤 Carga y Envío de Archivo Excel a GCP + Email")
 
-uploaded_file = st.file_uploader("📂 Subir archivo CSV", type=["csv"])
+uploaded_file = st.file_uploader(
+    "📂 Subir archivo Excel",
+    type=["xlsx", "xls"]
+)
 
 if "df" not in st.session_state:
     st.session_state.df = None
 
 # Mostrar DataFrame cargado
 if uploaded_file:
-    st.session_state.df = pd.read_csv(uploaded_file)
+    st.session_state.df = pd.read_excel(uploaded_file)
     st.write("📊 Vista previa del archivo:")
     st.dataframe(st.session_state.df)
 
