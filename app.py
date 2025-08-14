@@ -5,39 +5,45 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from google.cloud import storage
 import tempfile
-import ast
-import json
 from datetime import datetime
+import json
 
+# ======================
 # Leer variables desde st.secrets
+# ======================
 GMAIL_USER = st.secrets["email"]["GMAIL_USER"]
 GMAIL_PASSWORD = st.secrets["email"]["GMAIL_PASSWORD"]
 COPY_MAIL = st.secrets["email"]["COPY_MAIL"]
 GCS_BUCKET = st.secrets["gcp_config"]["GCS_BUCKET"]
+GCP_SERVICE_ACCOUNT = st.secrets["GCP_SERVICE_ACCOUNT"]
 
-# Configurar credenciales GCP
-gcp_credentials = json.loads(st.secrets["GCP_SERVICE_ACCOUNT"])
+# ======================
+# Configurar cliente GCP con credenciales temporales
+# ======================
 with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as temp_file:
-    temp_file.write(json.dumps(gcp_credentials).encode())
+    json.dump(GCP_SERVICE_ACCOUNT, temp_file)
     temp_file_path = temp_file.name
 
+storage_client = storage.Client.from_service_account_json(temp_file_path)
+bucket = storage_client.bucket(GCS_BUCKET)
+
+# ======================
 # Función subir a GCP
+# ======================
 def upload_to_gcp(df, blob_name):
     try:
-        storage_client = storage.Client.from_service_account_json(temp_file_path)
-        bucket = storage_client.bucket(GCS_BUCKET)
         blob = bucket.blob(blob_name)
-
         with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as temp_csv:
             df.to_csv(temp_csv.name, index=False)
             blob.upload_from_filename(temp_csv.name)
-
         return f"gs://{GCS_BUCKET}/{blob_name}"
     except Exception as e:
         st.error(f"❌ Error al subir a GCP: {e}")
         return None
 
+# ======================
 # Función enviar correo
+# ======================
 def send_email(df, timestamp):
     try:
         mensaje_html = f"""
@@ -62,7 +68,9 @@ def send_email(df, timestamp):
     except Exception as e:
         st.error(f"❌ Error al enviar el correo: {e}")
 
-# UI
+# ======================
+# Interfaz Streamlit
+# ======================
 st.title("📤 Carga y Envío de Archivo a GCP + Email")
 
 uploaded_file = st.file_uploader("📂 Subir archivo CSV", type=["csv"])
@@ -70,11 +78,13 @@ uploaded_file = st.file_uploader("📂 Subir archivo CSV", type=["csv"])
 if "df" not in st.session_state:
     st.session_state.df = None
 
+# Mostrar DataFrame cargado
 if uploaded_file:
     st.session_state.df = pd.read_csv(uploaded_file)
     st.write("📊 Vista previa del archivo:")
     st.dataframe(st.session_state.df)
 
+# Botones de acción solo si hay DataFrame cargado
 if st.session_state.df is not None:
     col1, col2, col3 = st.columns(3)
 
@@ -83,12 +93,14 @@ if st.session_state.df is not None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             blob_name = f"SurTrading_{timestamp}.csv"
 
+            # Seleccionar columnas a enviar
             cols_select = [
                 'Invoice_DATE', 'Repair_Order_Date', 'Odometer',
                 'Type_Service', 'VIN', 'Brand', 'Model_Name',
                 'Client', 'Phone', 'mail'
             ]
             df_selected = st.session_state.df[cols_select]
+
             gcs_path = upload_to_gcp(df_selected, blob_name)
             if gcs_path:
                 st.success(f"Archivo subido a: {gcs_path}")
@@ -97,7 +109,7 @@ if st.session_state.df is not None:
     with col2:
         if st.button("🧹 Limpiar vista"):
             st.session_state.df = None
-            st.rerun()
+            st.experimental_rerun()  # Borra la visualización
 
     with col3:
         fecha_inicio = st.date_input("Fecha inicio")
@@ -107,5 +119,8 @@ if st.session_state.df is not None:
                 (pd.to_datetime(st.session_state.df['Invoice_DATE']) >= pd.to_datetime(fecha_inicio)) &
                 (pd.to_datetime(st.session_state.df['Invoice_DATE']) <= pd.to_datetime(fecha_fin))
             ]
-            csv = df_filtrado.to_csv(index=False)
-            st.download_button("Descargar CSV", csv, file_name="filtrado.csv", mime="text/csv")
+            if not df_filtrado.empty:
+                csv = df_filtrado.to_csv(index=False)
+                st.download_button("Descargar CSV", csv, file_name="filtrado.csv", mime="text/csv")
+            else:
+                st.warning("⚠ No se encontraron registros en el rango seleccionado.")
