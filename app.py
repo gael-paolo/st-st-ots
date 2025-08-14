@@ -12,7 +12,7 @@ from datetime import datetime
 # Leer variables desde st.secrets
 GMAIL_USER = st.secrets["email"]["GMAIL_USER"]
 GMAIL_PASSWORD = st.secrets["email"]["GMAIL_PASSWORD"]
-COPY_MAIL = ast.literal_eval(st.secrets["email"]["COPY_MAIL"])
+COPY_MAIL = st.secrets["email"]["COPY_MAIL"]
 GCS_BUCKET = st.secrets["gcp_config"]["GCS_BUCKET"]
 
 # Configurar credenciales GCP
