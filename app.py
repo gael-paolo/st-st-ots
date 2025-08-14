@@ -141,7 +141,6 @@ if st.session_state.df is not None:
     with col2:
         if st.button("🧹 Limpiar vista"):
             st.session_state.df = None
-            st.experimental_rerun()  # Borra la visualización
 
     with col3:
         fecha_inicio = st.date_input("Fecha inicio")
